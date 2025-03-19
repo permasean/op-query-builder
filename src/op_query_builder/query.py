@@ -1,4 +1,5 @@
 from elements import Node, Way, Relation
+from derived import Area
 from typing import Tuple
 
 class Query:
@@ -52,6 +53,10 @@ class Query:
     @classmethod
     def add_relation(cls, relation: Relation) -> None:
         cls.elements.append(relation)
+
+    @classmethod
+    def add_area(cls, area: Area) -> None:
+        cls.elements.append(area)
     
     @classmethod
     def print(cls) -> None:

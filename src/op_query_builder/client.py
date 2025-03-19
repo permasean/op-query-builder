@@ -6,6 +6,7 @@ class QueryClient:
         self.api = overpy.Overpass()
 
     # method to get admin level
+    
     def execute_query(self, query: Query) -> str:
         return ''
     
@@ -20,5 +21,3 @@ class QueryClient:
         except Exception as e:
             print(f"Other error: {e}")
             return False
-    
-    # method to execute query
