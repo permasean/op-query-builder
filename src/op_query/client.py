@@ -2,7 +2,53 @@ from typing import Tuple
 import overpy
 
 class Node:
-    def __new__(cls) -> str:
+    def __init__(self) -> None:
+        self.id = ''
+        self.ids = []
+        self.tags = []
+        self.bbox = None
+        self.area = None
+        self.around = None
+        self.relation = None
+        self.way = None
+
+        # need set filtering and conditional logic
+
+    def with_id(self, id: str) -> 'Node':
+        if not self.ids:
+            self.id = id
+        else:
+            raise ValueError('Cannot set id, field ids is already set. Choose one or the other')
+        
+        return self
+    
+    def with_ids(self, ids: list[str]):
+        if not self.id:
+            self.ids = ids
+        else:
+            raise ValueError('Cannot set ids, field id is already set. Choose one or the other')
+
+        return self
+    
+    def with_tags(self, tags):
+        return self
+    
+    def with_bbox(self, bbox):
+        return self
+    
+    def with_area(self, area):
+        return self
+    
+    def with_around(self, around):
+        return self
+    
+    def with_relation(self, relation):
+        return self
+    
+    def with_way(self, way):
+        return self
+    
+    def __str__(self) -> str:
         return ''
     
 class Way:
@@ -54,16 +100,16 @@ class Query:
             raise ValueError("Invalid bbox value")
     
     @classmethod
-    def add_node(cls) -> None:
-        cls.elements.append('')
+    def add_node(cls, node: Node) -> None:
+        cls.elements.append(node)
 
     @classmethod
-    def add_way(cls) -> None:
-        cls.elements.append('')
+    def add_way(cls, way: Way) -> None:
+        cls.elements.append(way)
 
     @classmethod
-    def add_relation(cls) -> None:
-        cls.elements.append('')
+    def add_relation(cls, relation: Relation) -> None:
+        cls.elements.append(relation)
     
     @classmethod
     def print(cls) -> None:
