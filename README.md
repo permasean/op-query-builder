@@ -1,2 +1,2 @@
-# op-query
-Programmatically submit overpass queries. Wrapper for overpy package
+# op-query-builder
+Programmatically build overpass queries. Powered by overpy package.

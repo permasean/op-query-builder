@@ -1,7 +1,7 @@
 [project]
-name = "op-query"
+name = "op-query-builder"
 version = "0.0.1"
-description = "Programmatically edit overpass queries. Wrapper for overpy package"
+description = "Programmatically build overpass queries. Powered by overpy package"
 authors = [{ name = "Sean Hwang", email = "your.email@example.com" }]
 requires-python = ">=3.8"
 dependencies = [
