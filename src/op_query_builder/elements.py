@@ -5,12 +5,12 @@ class Node:
         self.id: str = ''
         self.ids: list[str] = []
         self.tags: list[Tuple[str, str]] = []
-        self.bbox: Tuple[float, float, float, float] = None
-        self.area = None
+        self.bbox: Tuple[int | float, int | float, int | float, int | float] = None
+        self.area_id = None
+        self.area_name = None
         self.around = None
         self.relation = None
         self.way = None
-        self.spatial_filter = None
         self.store_as_set = None
 
         # need set filtering and conditional logic
@@ -42,26 +42,63 @@ class Node:
         return self
     
     def with_tags(self, tags:list[Tuple[str, str]]) -> 'Node':
+        if not isinstance(tags, list):
+            raise TypeError('Cannot set tags, tags must be of type list')
+        
+        for tag in tags:
+            if not isinstance(tag, Tuple):
+                raise TypeError('Cannot set tags, tag in tags must be of type Tuple')
+            
+            if len(tag) != 2:
+                raise ValueError('Cannot set tags, tag in tags must be of length 2')
+            
+            for el in tag:
+                if not isinstance(el, str):
+                    raise TypeError('Cannot set tags, values in tuple must be of type str')
+                
+        self.tags = tags
+
         return self
     
-    def with_bbox(self, bbox: Tuple[float, float, float, float]) -> 'Node':
+    def with_bbox(self, bbox: Tuple[int | float, int | float, int | float, int | float]) -> 'Node':
+        # (float, float, float ,float)
         if not isinstance(bbox, Tuple):
             raise TypeError('Cannot set bbox, bbox must be of type Tuple')
         
-        if len(bbox) < 0:
-            raise ValueError('Cannot set bbox, invalid length detected for the Tuple')
-        
         if len(bbox) != 4:
             raise ValueError('Cannot set bbox, Tuple must be of length 4')
+        
+        for val in bbox:
+            if not isinstance(val, int) and not isinstance(val, float):
+                raise TypeError('Cannot set bbox, Tuple must only contain values of type int or float')
         
         self.bbox = bbox
         
         return self
     
-    def with_area(self, area) -> 'Node':
+    def with_area_by_id(self, area_id: int) -> 'Node':
+        # (area:area_id)
+        if not self.area_name:
+            self.area_id = area_id
+        else:
+            raise ValueError('Cannot set area_id, area_name is already set. Choose one or the other')
         return self
     
-    def with_around(self, around) -> 'Node':
+    def with_area_by_name(self, area_name: str) -> 'Node':
+        # (area.area_name)
+        if not self.area_id:
+            self.area_name = area_name
+        else:
+            raise ValueError('Cannot set area_name, area_id is already set. Choose one or the other')
+        return self
+    
+    def with_around_point(self, radius, lat, long) -> 'Node':
+        # (around:<radius>,<lat>,<lon>)
+
+        return self
+    
+    def with_around_set(self, set_name, radius) -> 'Node':
+        # (around.<setname>:<radius>)
         return self
     
     def with_relation(self, relation) -> 'Node':
@@ -90,7 +127,6 @@ class Way:
         self.around = None
         self.relation = None
         self.node = None
-        self.spatial_filter = None
         self.store_as_set = None
 
         # need set filtering and conditional logic
@@ -153,7 +189,6 @@ class Relation:
         self.node_member_and_role = None
         self.way_member_and_role = None
         self.relation_member_and_role = None
-        self.spatial_filter = None
         self.store_as_set = None
 
         # need set filtering and conditional logic
