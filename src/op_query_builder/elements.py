@@ -2,16 +2,20 @@ from typing import Tuple
 
 class Node:
     def __init__(self) -> None:
-        self.id: str = ''
-        self.ids: list[str] = []
+        self.id: int = ''
+        self.ids: list[int] = []
         self.tags: list[Tuple[str, str]] = []
         self.bbox: Tuple[int | float, int | float, int | float, int | float] = None
-        self.area_id = None
-        self.area_name = None
-        self.around = None
-        self.relation = None
-        self.way = None
-        self.store_as_set = None
+        self.area_id: int = None
+        self.area_name: str = None
+        self.around_point: Tuple[int | float, int | float, int | float] = None
+        self.around_set: Tuple[str, int | float] = None
+        self.relation: int = None
+        self.relation_and_role: Tuple[int, str]= None
+        self.relation_from_set: str = None
+        self.way: int = None
+        self.way_from_set: str = None
+        self.store_as_set: str = None
 
         # need set filtering and conditional logic
 
@@ -57,7 +61,6 @@ class Node:
                     raise TypeError('Cannot set tags, values in tuple must be of type str')
                 
         self.tags = tags
-
         return self
     
     def with_bbox(self, bbox: Tuple[int | float, int | float, int | float, int | float]) -> 'Node':
@@ -73,7 +76,6 @@ class Node:
                 raise TypeError('Cannot set bbox, Tuple must only contain values of type int or float')
         
         self.bbox = bbox
-        
         return self
     
     def with_area_by_id(self, area_id: int) -> 'Node':
@@ -92,27 +94,55 @@ class Node:
             raise ValueError('Cannot set area_name, area_id is already set. Choose one or the other')
         return self
     
-    def with_around_point(self, radius, lat, long) -> 'Node':
+    def with_around_point(self, radius: int|float, lat: int|float, long: int|float) -> 'Node':
         # (around:<radius>,<lat>,<lon>)
+        if self.around_set:
+            raise ValueError('Cannot set around_point, around_set is already configured. Choose one or the other')
 
+        if not isinstance(radius, int) and not isinstance(radius, float):
+            raise TypeError('Cannot set around_point, parameter radius must be of type int or float')
+        
+        if not isinstance(lat, int) and not isinstance(lat, float):
+            raise TypeError('Cannot set around_point, parameter lat must be of type int or float')
+        
+        if not isinstance(long, int) and not isinstance(long, float):
+            raise TypeError('Cannot set around_point, parameter long must be of type int or float')
+        
+        self.around_point = (radius, lat, long)
         return self
     
-    def with_around_set(self, set_name, radius) -> 'Node':
-        # (around.<setname>:<radius>)
+    def with_around_set(self, set_name: str, radius: int | float) -> 'Node':
+        # (around.<set_name>:<radius>)
+        if self.around_point:
+            raise ValueError('Cannot set around_set, around_point is already configured. Choose one or the other')
+        
+        if not isinstance(set_name, str):
+            raise ValueError('Cannot set around_set, parameter set_name must be of type str')
+        
+        if not isinstance(radius, int) and not isinstance(radius, float):
+            raise TypeError('Cannot set around_set, parameter radius must be of type int or float')
+        
+        self.around_set = (set_name, radius)
         return self
     
-    def with_relation(self, relation) -> 'Node':
+    def with_relation(self, relation_id) -> 'Node':
         return self
     
-    def with_way(self, way) -> 'Node':
+    def with_relation_and_role(self, relation_id, role) -> 'Node':
         return self
     
-    def with_spatial_filter(self, spatial_filter) -> 'Node':
+    def with_relation_from_set(self, set_name) -> 'Node':
         return self
     
-    def store_as_set(self, set_name: str) -> 'Node':
+    def with_way(self, way_id) -> 'Node':
+        # node(w:<way_id>)
+        return self
+    
+    def with_way_from_set(self, set_name) -> 'Node':
+        return self
+    
+    def store_as_set(self, set_name: str) -> None:
         self.store_as_set = set_name
-        return self
     
     def __str__(self) -> str:
         return ''
@@ -168,9 +198,8 @@ class Way:
     def with_spatial_filter(self, spatial_filter) -> 'Way':
         return self
     
-    def store_as_set(self, set_name: str) -> 'Way':
+    def store_as_set(self, set_name: str) -> None:
         self.store_as_set = set_name
-        return self
     
     def __str__(self) -> str:
         return ''
@@ -242,9 +271,8 @@ class Relation:
     def with_spatial_filter(self, spatial_filter) -> 'Relation':
         return self
     
-    def store_as_set(self, set_name:str) -> 'Relation':
+    def store_as_set(self, set_name:str) -> None:
         self.store_as_set = set_name
-        return self
     
     def __str__(self) -> str:
         return ''
