@@ -1,1 +1,6 @@
+iniconfig==2.1.0
+op-query-builder @ file:///Users/seanhwang/Projects/op-query-builder
 overpy==0.7
+packaging==24.2
+pluggy==1.5.0
+pytest==8.3.5
