@@ -1,4 +1,4 @@
-from query import Query
+from op_query_builder.query import Query
 import overpy
 
 class QueryClient:
