@@ -187,18 +187,12 @@ class TestNode(unittest.TestCase):
             Node().with_version(0)
 
     def test_complex_query(self):
-        node = Node()
-        print("After init:", node, type(node))
-        node = node.from_set("input")
-        print("After from_set:", node, type(node))
-        node = node.with_id(123)
-        print("After with_id:", node, type(node))
-        node = node.with_tags([("highway", "primary")])
-        print("After with_tags:", node, type(node))
-        node = node.with_user("JohnDoe")
-        print("After with_user:", node, type(node))
-        node = node.store_as_set("output")
-        print("After store_as_set:", node, type(node))
+        node = (Node()
+                .from_set("input")
+                .with_id(123)
+                .with_tags([("highway", "primary")])
+                .with_user("JohnDoe")
+                .store_as_set("output"))
         self.assertEqual(str(node), ".input node(123)[highway=primary][user=JohnDoe]->.output;")
 
 if __name__ == "__main__":

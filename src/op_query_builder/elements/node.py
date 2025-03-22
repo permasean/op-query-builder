@@ -15,7 +15,7 @@ class Node:
         self.relation_from_set: Optional[str] = None
         self.way: Optional[int] = None
         self.way_from_set: Optional[str] = None
-        self.store_as_set: Optional[str] = None
+        self.set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
         self.tag_conditions: list[str] = []
 
@@ -308,7 +308,7 @@ class Node:
             raise ValueError("set_name cannot be empty or whitespace")
         if any(char in set_name for char in '[]{}();'):
             raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.store_as_set = set_name
+        self.set_name = set_name
         return self
     
     def __str__(self) -> str:
@@ -374,8 +374,8 @@ class Node:
             query += f"(w.{self.way_from_set})"
         
         # Store as set
-        if self.store_as_set:
-            query += f"->.{self.store_as_set}"
+        if self.set_name:
+            query += f"->.{self.set_name}"
         
         # Terminate the query
         query += ";"
