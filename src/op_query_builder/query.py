@@ -4,6 +4,8 @@ from op_query_builder.elements.way import Way
 from op_query_builder.elements.relation import Relation
 from op_query_builder.elements.changeset import Changeset
 from op_query_builder.derived.area import Area
+from op_query_builder.temporal.adiff import Adiff
+from op_query_builder.temporal.timeline import Timeline
 
 class Query:
     def __init__(self):
@@ -16,11 +18,11 @@ class Query:
         self.is_in_statements: List[TypingTuple[float, float, Optional[str]]] = []  # (lat, lon, set_name)
         self.foreach_statements: List[TypingTuple[str, 'Query']] = []  # (set_name, subquery)
         self.convert_statements: List[TypingTuple[str, str, List[str]]] = []  # (element_type, set_name, tags)
-        # New attributes for out modifiers
         self.sort_order: Optional[str] = None  # qt, asc, or desc
         self.limit: Optional[int] = None  # Limit the number of results
         self.output_mode: Optional[str] = None  # count, ids, or None
         self.settings: dict[str, str] = {}  # For arbitrary settings
+        self.temporal_statements: List[TypingUnion[Adiff, Timeline]] = []  # For adiff and timeline
 
     def with_output(self, output: str) -> 'Query':
         if output not in ['json', 'csv', 'xml']:
@@ -137,6 +139,14 @@ class Query:
         self.elements.append(difference)
         return self
 
+    def add_adiff(self, adiff: Adiff) -> 'Query':
+        self.temporal_statements.append(adiff)
+        return self
+
+    def add_timeline(self, timeline: Timeline) -> 'Query':
+        self.temporal_statements.append(timeline)
+        return self
+
     def add_is_in(self, lat: float, lon: float, set_name: Optional[str] = None) -> 'Query':
         """Add an 'is_in' statement to find areas containing the given point (e.g., 'is_in(51.5,-0.1)->.areas;')."""
         if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
@@ -244,6 +254,13 @@ class Query:
             if set_name:
                 line += f"->.{set_name}"
             query_lines.append(f"{line};")
+
+        # Add temporal statements (adiff, timeline) before elements
+        for temporal in self.temporal_statements:
+            temporal_str = str(temporal)
+            if temporal_str.endswith(';'):
+                temporal_str = temporal_str[:-1]
+            query_lines.append(f"{temporal_str};")
 
         # Add elements
         for element in self.elements:
