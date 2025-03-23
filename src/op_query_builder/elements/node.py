@@ -1,7 +1,9 @@
 from typing import Tuple, Optional
+from .base import Element
 
-class Node:
+class Node(Element):
     def __init__(self) -> None:
+        super().__init__()
         self.id: Optional[int] = None
         self.ids: list[int] = []
         self.tags: list[Tuple[str, str]] = []
@@ -17,9 +19,6 @@ class Node:
         self.way_from_set: Optional[str] = None
         self.set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
-        self.tag_conditions: list[str] = []
-
-        # need conditional logic
 
     # Helper method to check spatial filter exclusivity
     def _has_spatial_filter(self) -> bool:
@@ -32,7 +31,7 @@ class Node:
     def _has_way_filter(self) -> bool:
         return any([self.way, self.way_from_set])
 
-    def with_id(self, id: str) -> 'Node':
+    def with_id(self, id: int) -> 'Node':
         if not isinstance(id, int):
             raise TypeError("id must be of type int")
         if id < 0:
@@ -43,7 +42,7 @@ class Node:
             raise ValueError("Cannot set id, field ids is already set. Choose one or the other")
         return self
     
-    def with_ids(self, ids: list[str]) -> 'Node':
+    def with_ids(self, ids: list[int]) -> 'Node':
         if not isinstance(ids, list):
             raise TypeError("ids must be of type list")
         if not ids:
@@ -59,7 +58,7 @@ class Node:
             raise ValueError("Cannot set ids, field id is already set. Choose one or the other")
         return self
     
-    def with_tags(self, tags:list[Tuple[str, str]]) -> 'Node':
+    def with_tags(self, tags: list[Tuple[str, str]]) -> 'Node':
         if not isinstance(tags, list):
             raise TypeError('tags must be of type list')
         
@@ -326,7 +325,11 @@ class Node:
         if self.id is not None:
             query += f"({self.id})"
         elif self.ids:
-            query += f"({'|'.join(map(str, self.ids))})"
+            query += f"({','.join(map(str, self.ids))})"
+        
+        # Pivot set
+        if self.pivot_set:
+            query += f"(pivot.{self.pivot_set})"
         
         # Tag filters (exact match, existence, negation, regex)
         for key, value in self.tags:
@@ -346,6 +349,9 @@ class Node:
         # Custom tag conditions (e.g., '["highway"~"^(primary|secondary)$"]')
         for condition in self.tag_conditions:
             query += condition
+        
+        # If conditions
+        query = self._append_if_conditions(query)
         
         # Spatial filters
         if self.bbox:

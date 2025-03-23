@@ -56,6 +56,55 @@ class TestQuery(unittest.TestCase):
         expected = "[out:json];\nway[highway=primary];\nout geom;"
         self.assertEqual(str(self.query), expected)
 
+    def test_with_sort_order(self):
+        self.query.with_sort_order("qt")
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json];\nway[highway=primary];\nout body qt;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_with_limit(self):
+        self.query.with_limit(100)
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json];\nway[highway=primary];\nout body 100;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_with_output_mode_count(self):
+        self.query.with_output_mode("count")
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json];\nway[highway=primary];\nout count;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_with_output_mode_ids(self):
+        self.query.with_output_mode("ids")
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json];\nway[highway=primary];\nout ids;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_combined_out_modifiers(self):
+        self.query.with_output_detail("geom").with_sort_order("qt").with_limit(50)
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json];\nway[highway=primary];\nout geom qt 50;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_with_setting_maxsize(self):
+        self.query.with_setting("maxsize", "1000000")
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = "[out:json maxsize:1000000];\nway[highway=primary];\nout body;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_with_setting_diff(self):
+        self.query.with_setting("diff", "2023-01-01T00:00:00Z")
+        way = Way().with_tags([("highway", "primary")])
+        self.query.add_way(way)
+        expected = '[out:json diff:"2023-01-01T00:00:00Z"];\nway[highway=primary];\nout body;'
+        self.assertEqual(str(self.query), expected)
+
     def test_add_changeset(self):
         changeset = Changeset().with_user("JohnDoe")
         self.query.add_changeset(changeset)

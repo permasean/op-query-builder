@@ -202,6 +202,18 @@ class TestRelation(unittest.TestCase):
         relation = self.relation.with_tag_condition('["boundary"~"administrative"]')
         self.assertEqual(str(relation), 'relation["boundary"~"administrative"];')
 
+    def test_with_if_condition(self):
+        relation = self.relation.with_if_condition('count(members) > 10')
+        self.assertEqual(str(relation), 'relation[if:count(members) > 10];')
+
+    def test_with_if_and_tags(self):
+        relation = self.tagged_relation.with_if_condition('count_tags() > 2')
+        self.assertEqual(str(relation), 'relation[boundary=administrative][if:count_tags() > 2];')
+
+    def test_with_pivot(self):
+        relation = self.relation.with_pivot("boundary_set")
+        self.assertEqual(str(relation), "relation(pivot.boundary_set);")
+
     def test_with_uid(self):
         relation = self.relation.with_uid(12345)
         self.assertEqual(str(relation), "relation[uid=12345];")

@@ -1,7 +1,9 @@
 from typing import Tuple, Optional, List, Union
+from .base import Element
 
-class Changeset:
+class Changeset(Element):
     def __init__(self) -> None:
+        super().__init__()
         self.id: Optional[int] = None
         self.ids: List[int] = []
         self.tags: List[Tuple[str, str]] = []
@@ -9,7 +11,6 @@ class Changeset:
         self.time_range: Optional[Tuple[str, str]] = None  # (start_time, end_time)
         self._store_as_set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
-        self.tag_conditions: List[str] = []
 
     # Helper methods for filter exclusivity
     def _has_spatial_filter(self) -> bool:
@@ -218,11 +219,12 @@ class Changeset:
                 query += f"[{key}{value}]"
             else:
                 query += f"[{key}={value}]"
+        for condition in self.tag_conditions:
+            query += condition
+        query = self._append_if_conditions(query)
         if self.time_range:
             start_time, end_time = self.time_range
             query += f'[time>="{start_time}"][time<="{end_time}"]'
-        for condition in self.tag_conditions:
-            query += condition
         if self.bbox:
             query += f"({','.join(map(str, self.bbox))})"
         if self._store_as_set_name:

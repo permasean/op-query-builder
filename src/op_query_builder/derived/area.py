@@ -1,13 +1,13 @@
 from typing import Optional, List, Tuple as TypingTuple, Union as TypingUnion
+from op_query_builder.elements.base import Element
 
-class Area:
+class Area(Element):
     def __init__(self) -> None:
+        super().__init__()
         self.id: Optional[int] = None
         self.tags: List[TypingTuple[str, str]] = []
-        self.pivot_set: Optional[str] = None  # For area(pivot.set_name)
         self._store_as_set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
-        self.tag_conditions: List[str] = []
 
     def with_id(self, id: int) -> 'Area':
         if not isinstance(id, int):
@@ -19,6 +19,14 @@ class Area:
         if self.pivot_set is not None:
             raise ValueError("Cannot set id when a pivot set is already set")
         self.id = id
+        return self
+
+    def with_pivot(self, set_name: str) -> 'Area':
+        """Filter areas using a pivot set (e.g., 'pivot.set_name')."""
+        if self.id is not None:
+            raise ValueError("Cannot set pivot when an id is already set")
+        # Call the parent class's with_pivot for common validation
+        super().with_pivot(set_name)
         return self
 
     def with_tags(self, tags: List[TypingTuple[str, str]]) -> 'Area':
@@ -49,18 +57,6 @@ class Area:
         if not name.strip():
             raise ValueError("name cannot be empty or whitespace")
         self._update_or_append_tag("name", name)
-        return self
-
-    def with_pivot(self, set_name: str) -> 'Area':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters")
-        if self.id is not None:
-            raise ValueError("Cannot set pivot when an id is already set")
-        self.pivot_set = set_name
         return self
 
     def from_set(self, set_name: str) -> 'Area':
@@ -157,6 +153,7 @@ class Area:
                 query += f"[{key}={value}]"
         for condition in self.tag_conditions:
             query += condition
+        query = self._append_if_conditions(query)
         if self._store_as_set_name:
             query += f"->.{self._store_as_set_name}"
         query += ";"

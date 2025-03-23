@@ -158,6 +158,14 @@ class TestChangeset(unittest.TestCase):
         changeset = self.changeset.with_tag_condition('["user"~"John.*"]')
         self.assertEqual(str(changeset), 'changeset["user"~"John.*"];')
 
+    def test_with_if_condition(self):
+        changeset = self.changeset.with_if_condition('count_tags() > 2')
+        self.assertEqual(str(changeset), 'changeset[if:count_tags() > 2];')
+
+    def test_with_if_and_tags(self):
+        changeset = self.tagged_changeset.with_if_condition('count_tags() > 1')
+        self.assertEqual(str(changeset), 'changeset[user=JohnDoe][if:count_tags() > 1];')
+
     def test_with_user_multiple_calls(self):
         changeset = self.changeset.with_user("JohnDoe").with_user("JaneDoe")
         self.assertEqual(str(changeset), "changeset[user=JaneDoe];")

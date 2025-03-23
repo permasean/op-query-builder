@@ -16,6 +16,11 @@ class Query:
         self.is_in_statements: List[TypingTuple[float, float, Optional[str]]] = []  # (lat, lon, set_name)
         self.foreach_statements: List[TypingTuple[str, 'Query']] = []  # (set_name, subquery)
         self.convert_statements: List[TypingTuple[str, str, List[str]]] = []  # (element_type, set_name, tags)
+        # New attributes for out modifiers
+        self.sort_order: Optional[str] = None  # qt, asc, or desc
+        self.limit: Optional[int] = None  # Limit the number of results
+        self.output_mode: Optional[str] = None  # count, ids, or None
+        self.settings: dict[str, str] = {}  # For arbitrary settings
 
     def with_output(self, output: str) -> 'Query':
         if output not in ['json', 'csv', 'xml']:
@@ -52,6 +57,50 @@ class Query:
     def with_global_bbox(self, bbox: TypingTuple[float, float, float, float]) -> 'Query':
         self._validate_bbox(bbox)
         self.global_bbox = bbox
+        return self
+
+    def with_sort_order(self, sort_order: str) -> 'Query':
+        """Set the sort order for the output (e.g., 'qt', 'asc', 'desc')."""
+        valid_sort_orders = ['qt', 'asc', 'desc']
+        if sort_order not in valid_sort_orders:
+            raise ValueError(f"Sort order must be one of {valid_sort_orders}, got {sort_order}")
+        self.sort_order = sort_order
+        return self
+
+    def with_limit(self, limit: int) -> 'Query':
+        """Set a limit on the number of results returned."""
+        if not isinstance(limit, int):
+            raise TypeError(f"Limit must be an integer, got {type(limit).__name__}")
+        if limit <= 0:
+            raise ValueError("Limit must be a positive integer")
+        self.limit = limit
+        return self
+
+    def with_output_mode(self, mode: Optional[str]) -> 'Query':
+        """Set the output mode (e.g., 'count', 'ids')."""
+        if mode is not None:
+            valid_modes = ['count', 'ids']
+            if mode not in valid_modes:
+                raise ValueError(f"Output mode must be one of {valid_modes}, got {mode}")
+        self.output_mode = mode
+        return self
+
+    def with_setting(self, key: str, value: str) -> 'Query':
+        """Add a global setting (e.g., 'maxsize:1000000')."""
+        if not isinstance(key, str) or not isinstance(value, str):
+            raise TypeError("key and value must be of type str")
+        if not key.strip():
+            raise ValueError("key cannot be empty or whitespace")
+        # Basic validation for common settings
+        if key == "maxsize":
+            try:
+                int(value)
+            except ValueError:
+                raise ValueError("maxsize must be an integer")
+        elif key == "diff":
+            if 'T' not in value or 'Z' not in value:
+                raise ValueError("diff must be in ISO 8601 format (e.g., '2023-01-01T00:00:00Z')")
+        self.settings[key] = value
         return self
 
     def add_node(self, node: Node) -> 'Query':
@@ -179,6 +228,13 @@ class Query:
         if self.global_bbox:
             bbox_str = ",".join(map(str, self.global_bbox))
             settings.append(f"bbox:{bbox_str}")
+        for key, value in self.settings.items():
+            if key in ["date", "timeout", "bbox", "out"]:  # Avoid duplicates
+                continue
+            if key in ["date", "diff"]:
+                settings.append(f'{key}:"{value}"')
+            else:
+                settings.append(f"{key}:{value}")
         if settings:
             query_lines.append(f"[{' '.join(settings)}];")
 
@@ -214,9 +270,18 @@ class Query:
                 line += f"->.{set_name}"
             query_lines.append(f"{line};")
 
-        # Add output detail only if explicitly set
-        if self.output_detail is not None:
-            query_lines.append(f"out {self.output_detail};")
+        # Add output statement with modifiers
+        if self.output_mode == 'count':
+            query_lines.append("out count;")
+        elif self.output_mode == 'ids':
+            query_lines.append("out ids;")
+        elif self.output_detail is not None:
+            out_parts = [f"out {self.output_detail}"]
+            if self.sort_order:
+                out_parts.append(self.sort_order)
+            if self.limit is not None:
+                out_parts.append(str(self.limit))
+            query_lines.append(f"{' '.join(out_parts)};")
 
         return "\n".join(query_lines)
 

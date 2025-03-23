@@ -14,7 +14,7 @@ class TestNode(unittest.TestCase):
 
     def test_with_ids(self):
         node = Node().with_ids([1, 2, 3])
-        self.assertEqual(str(node), "node(1|2|3);")
+        self.assertEqual(str(node), "node(1,2,3);")
         with self.assertRaises(TypeError):
             Node().with_ids(["1", "2"])
         with self.assertRaises(ValueError):
@@ -161,6 +161,22 @@ class TestNode(unittest.TestCase):
         self.assertEqual(str(node), 'node["highway"~"primary"];')
         with self.assertRaises(ValueError):
             Node().with_tag_condition("invalid")
+
+    def test_with_if_condition(self):
+        node = Node().with_if_condition('t["population"] > 100000')
+        self.assertEqual(str(node), 'node[if:t["population"] > 100000];')
+
+    def test_with_if_condition_eval(self):
+        node = Node().with_if_condition('eval(t["name"]) == "Berlin"')
+        self.assertEqual(str(node), 'node[if:eval(t["name"]) == "Berlin"];')
+
+    def test_with_if_and_tags(self):
+        node = Node().with_tags([("amenity", "restaurant")]).with_if_condition('count_tags() > 5')
+        self.assertEqual(str(node), 'node[amenity=restaurant][if:count_tags() > 5];')
+
+    def test_with_pivot(self):
+        node = Node().with_pivot("boundary_set")
+        self.assertEqual(str(node), "node(pivot.boundary_set);")
 
     def test_with_user(self):
         node = Node().with_user("JohnDoe")

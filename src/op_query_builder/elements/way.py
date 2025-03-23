@@ -1,7 +1,9 @@
 from typing import Tuple, Optional, List, Union
+from .base import Element
 
-class Way:
+class Way(Element):
     def __init__(self) -> None:
+        super().__init__()
         self.id: Optional[int] = None
         self.ids: List[int] = []
         self.tags: List[Tuple[str, str]] = []
@@ -17,7 +19,6 @@ class Way:
         self.relation_from_set: Optional[str] = None
         self._store_as_set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
-        self.tag_conditions: List[str] = []
         self.is_closed: Optional[bool] = None  # Filter for closed ways
         self.min_length: Optional[float] = None  # Filter by length
         self.min_nodes: Optional[int] = None  # Filter by node count
@@ -328,6 +329,8 @@ class Way:
             query += f"({self.id})"
         elif self.ids:
             query += f"({','.join(map(str, self.ids))})"
+        if self.pivot_set:
+            query += f"(pivot.{self.pivot_set})"
         for key, value in self.tags:
             if value == "":
                 query += f"[{key}]"
@@ -339,6 +342,7 @@ class Way:
                 query += f"[{key}={value}]"
         for condition in self.tag_conditions:
             query += condition
+        query = self._append_if_conditions(query)
         if self.is_closed is not None:
             query += f"[is_closed={'true' if self.is_closed else 'false'}]"
         if self.min_length is not None:

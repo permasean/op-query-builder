@@ -104,6 +104,14 @@ class TestArea(unittest.TestCase):
         area = self.area.with_tag_condition('["boundary"~"administrative"]')
         self.assertEqual(str(area), 'area["boundary"~"administrative"];')
 
+    def test_with_if_condition(self):
+        area = self.area.with_if_condition('count_tags() > 2')
+        self.assertEqual(str(area), 'area[if:count_tags() > 2];')
+
+    def test_with_if_and_tags(self):
+        area = self.tagged_area.with_if_condition('count_tags() > 1')
+        self.assertEqual(str(area), 'area[boundary=administrative][if:count_tags() > 1];')
+
     def test_with_tag_multiple_calls(self):
         area = self.area.with_tag_exists("boundary").with_tag_not_exists("boundary")
         self.assertEqual(str(area), "area[!boundary];")

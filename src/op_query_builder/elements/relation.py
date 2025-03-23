@@ -1,7 +1,9 @@
 from typing import Tuple, Optional, List, Union
+from .base import Element
 
-class Relation:
+class Relation(Element):
     def __init__(self) -> None:
+        super().__init__()
         self.id: Optional[int] = None
         self.ids: List[int] = []
         self.tags: List[Tuple[str, str]] = []
@@ -19,7 +21,6 @@ class Relation:
         self.relation_from_set: Optional[str] = None  # relation(r.set_name)
         self._store_as_set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
-        self.tag_conditions: List[str] = []
         self.min_members: Optional[int] = None  # Filter by minimum member count
         self.min_role_count: Optional[Tuple[str, int]] = None  # (role, min_count)
         self.include_members: bool = False  # Downward recursion
@@ -358,6 +359,8 @@ class Relation:
             query += f"({self.id})"
         elif self.ids:
             query += f"({','.join(map(str, self.ids))})"
+        if self.pivot_set:
+            query += f"(pivot.{self.pivot_set})"
         for key, value in self.tags:
             if value == "":
                 query += f"[{key}]"
@@ -369,6 +372,7 @@ class Relation:
                 query += f"[{key}={value}]"
         for condition in self.tag_conditions:
             query += condition
+        query = self._append_if_conditions(query)
         if self.min_members is not None:
             query += f"[if:count(members)>{self.min_members}]"
         if self.min_role_count is not None:

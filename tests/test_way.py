@@ -186,6 +186,18 @@ class TestWay(unittest.TestCase):
         way = self.way.with_tag_condition('["highway"~"primary"]')
         self.assertEqual(str(way), 'way["highway"~"primary"];')
 
+    def test_with_if_condition(self):
+        way = self.way.with_if_condition('length() > 1000')
+        self.assertEqual(str(way), 'way[if:length() > 1000];')
+
+    def test_with_if_and_tags(self):
+        way = self.tagged_way.with_if_condition('count_tags() > 3')
+        self.assertEqual(str(way), 'way[highway=primary][if:count_tags() > 3];')
+
+    def test_with_pivot(self):
+        way = self.way.with_pivot("boundary_set")
+        self.assertEqual(str(way), "way(pivot.boundary_set);")
+
     def test_with_uid(self):
         way = self.way.with_uid(12345)
         self.assertEqual(str(way), "way[uid=12345];")
