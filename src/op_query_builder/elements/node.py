@@ -4,9 +4,6 @@ from .base import Element
 class Node(Element):
     def __init__(self) -> None:
         super().__init__()
-        self.id: Optional[int] = None
-        self.ids: list[int] = []
-        self.tags: list[Tuple[str, str]] = []
         self.bbox: Tuple[int | float, int | float, int | float, int | float] = None
         self.area_id: Optional[int] = None
         self.area_name: Optional[str] = None
@@ -17,8 +14,6 @@ class Node(Element):
         self.relation_from_set: Optional[str] = None
         self.way: Optional[int] = None
         self.way_from_set: Optional[str] = None
-        self.set_name: Optional[str] = None
-        self.filter_from_set: Optional[str] = None
 
     # Helper method to check spatial filter exclusivity
     def _has_spatial_filter(self) -> bool:
@@ -31,51 +26,6 @@ class Node(Element):
     def _has_way_filter(self) -> bool:
         return any([self.way, self.way_from_set])
 
-    def with_id(self, id: int) -> 'Node':
-        if not isinstance(id, int):
-            raise TypeError("id must be of type int")
-        if id < 0:
-            raise ValueError("id must be a non-negative integer")
-        if not self.ids:
-            self.id = id
-        else:
-            raise ValueError("Cannot set id, field ids is already set. Choose one or the other")
-        return self
-    
-    def with_ids(self, ids: list[int]) -> 'Node':
-        if not isinstance(ids, list):
-            raise TypeError("ids must be of type list")
-        if not ids:
-            raise ValueError("ids list cannot be empty")
-        for id in ids:
-            if not isinstance(id, int):
-                raise TypeError("Cannot set ids, all values in ids must be of type int")
-            if id < 0:
-                raise ValueError("Cannot set ids, all values in ids must be non-negative integers")
-        if not self.id:
-            self.ids = ids
-        else:
-            raise ValueError("Cannot set ids, field id is already set. Choose one or the other")
-        return self
-    
-    def with_tags(self, tags: list[Tuple[str, str]]) -> 'Node':
-        if not isinstance(tags, list):
-            raise TypeError('tags must be of type list')
-        
-        for tag in tags:
-            if not isinstance(tag, Tuple):
-                raise TypeError('tag in tags must be of type Tuple')
-            
-            if len(tag) != 2:
-                raise ValueError('tag in tags must be of length 2')
-            
-            for el in tag:
-                if not isinstance(el, str):
-                    raise TypeError('Cannot set tags, values in tuple must be of type str')
-                
-        self.tags = tags
-        return self
-    
     def with_bbox(self, bbox: Tuple[int | float, int | float, int | float, int | float]) -> 'Node':
         # (float, float, float ,float)
         if not isinstance(bbox, Tuple) or len(bbox) != 4:
@@ -201,61 +151,6 @@ class Node(Element):
         self.way_from_set = set_name
         return self
     
-    def from_set(self, set_name: str) -> 'Node':
-        """Filter nodes from a previously defined set (e.g., '.set_name node;')."""
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.filter_from_set = set_name
-        return self
-
-    def with_tag_exists(self, key: str) -> 'Node':
-        """Filter nodes where a tag key exists (e.g., '[key]')."""
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self.tags.append((key, ""))  # Empty value indicates existence check
-        return self
-
-    def with_tag_not_exists(self, key: str) -> 'Node':
-        """Filter nodes where a tag key does not exist (e.g., '[!key]')."""
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self.tags.append((f"!{key}", ""))  # !key with empty value
-        return self
-
-    def with_tag_not(self, key: str, value: str) -> 'Node':
-        """Filter nodes where a tag does not equal a value (e.g., '[key!=value]')."""
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise TypeError("key and value must be of type str")
-        if not key.strip() or not value.strip():
-            raise ValueError("key and value cannot be empty or whitespace")
-        self.tags.append((key, f"!={value}"))
-        return self
-
-    def with_tag_regex(self, key: str, regex: str) -> 'Node':
-        """Filter nodes where a tag matches a regex (e.g., '[key~regex]')."""
-        if not isinstance(key, str) or not isinstance(regex, str):
-            raise TypeError("key and regex must be of type str")
-        if not key.strip() or not regex.strip():
-            raise ValueError("key and regex cannot be empty or whitespace")
-        self.tags.append((key, f"~{regex}"))
-        return self
-
-    def with_tag_condition(self, condition: str) -> 'Node':
-        """Add a custom tag condition (e.g., '["highway"~"^(primary|secondary)$"]')."""
-        if not isinstance(condition, str):
-            raise TypeError("condition must be of type str")
-        self.validate_tag_condition(condition)
-        self.tag_conditions.append(condition)
-        return self
-    
     def with_user(self, username: str) -> 'Node':
         """Filter nodes edited by a specific user (e.g., '[user:username]')."""
         if not isinstance(username, str):
@@ -293,17 +188,6 @@ class Node(Element):
         if version < 1:
             raise ValueError("version must be a positive integer")
         self.tags.append(("version", str(version)))
-        return self
-    
-    def store_as_set(self, set_name: str) -> 'Node':
-        """Store the result of this query as a named set (e.g., '->.set_name')."""
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.set_name = set_name
         return self
     
     def __str__(self) -> str:
@@ -376,8 +260,8 @@ class Node(Element):
             query += f"(w.{self.way_from_set})"
         
         # Store as set
-        if self.set_name:
-            query += f"->.{self.set_name}"
+        if self._store_as_set_name:
+            query += f"->.{self._store_as_set_name}"
         
         # Terminate the query
         query += ";"

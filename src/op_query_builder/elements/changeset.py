@@ -4,13 +4,8 @@ from .base import Element
 class Changeset(Element):
     def __init__(self) -> None:
         super().__init__()
-        self.id: Optional[int] = None
-        self.ids: List[int] = []
-        self.tags: List[Tuple[str, str]] = []
         self.bbox: Optional[Tuple[float, float, float, float]] = None
         self.time_range: Optional[Tuple[str, str]] = None  # (start_time, end_time)
-        self._store_as_set_name: Optional[str] = None
-        self.filter_from_set: Optional[str] = None
 
     # Helper methods for filter exclusivity
     def _has_spatial_filter(self) -> bool:
@@ -18,53 +13,6 @@ class Changeset(Element):
 
     def _has_time_filter(self) -> bool:
         return any(tag[0] == "time" for tag in self.tags) or self.time_range is not None
-
-    def _update_or_append_tag(self, key: str, value: str) -> None:
-        """Helper method to update an existing tag or append a new one."""
-        for i, (existing_key, _) in enumerate(self.tags):
-            if existing_key == key:
-                self.tags[i] = (key, value)
-                return
-        self.tags.append((key, value))
-
-    def with_id(self, id: int) -> 'Changeset':
-        if not isinstance(id, int):
-            raise TypeError("id must be of type int")
-        if id < 0:
-            raise ValueError("id must be a non-negative integer")
-        if self.ids:
-            raise ValueError("Cannot set id, field ids is already set. Choose one or the other")
-        self.id = id
-        return self
-
-    def with_ids(self, ids: List[int]) -> 'Changeset':
-        if not isinstance(ids, list):
-            raise TypeError("ids must be of type list")
-        if not ids:
-            raise ValueError("ids list cannot be empty")
-        for id in ids:
-            if not isinstance(id, int):
-                raise TypeError("All values in ids must be of type int")
-            if id < 0:
-                raise ValueError("All values in ids must be non-negative integers")
-        if self.id is not None:
-            raise ValueError("Cannot set ids, field id is already set. Choose one or the other")
-        self.ids = ids
-        return self
-
-    def with_tags(self, tags: List[Tuple[str, str]]) -> 'Changeset':
-        if not isinstance(tags, list):
-            raise TypeError("tags must be of type list")
-        for tag in tags:
-            if not isinstance(tag, tuple):
-                raise TypeError("Each tag in tags must be of type tuple")
-            if len(tag) != 2:
-                raise ValueError("Each tag in tags must be a tuple of length 2")
-            for el in tag:
-                if not isinstance(el, str):
-                    raise TypeError("Tag key and value must be of type str")
-        self.tags = tags
-        return self
 
     def with_bbox(self, bbox: Tuple[float, float, float, float]) -> 'Changeset':
         if not isinstance(bbox, tuple) or len(bbox) != 4:
@@ -137,65 +85,6 @@ class Changeset(Element):
         if not editor.strip():
             raise ValueError("editor cannot be empty or whitespace")
         self._update_or_append_tag("created_by", editor)
-        return self
-
-    def with_tag_exists(self, key: str) -> 'Changeset':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self._update_or_append_tag(key, "")
-        return self
-
-    def with_tag_not_exists(self, key: str) -> 'Changeset':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self._update_or_append_tag(f"!{key}", "")
-        return self
-
-    def with_tag_not(self, key: str, value: str) -> 'Changeset':
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise TypeError("key and value must be of type str")
-        if not key.strip() or not value.strip():
-            raise ValueError("key and value cannot be empty or whitespace")
-        self._update_or_append_tag(key, f"!={value}")
-        return self
-
-    def with_tag_regex(self, key: str, regex: str) -> 'Changeset':
-        if not isinstance(key, str) or not isinstance(regex, str):
-            raise TypeError("key and regex must be of type str")
-        if not key.strip() or not regex.strip():
-            raise ValueError("key and regex cannot be empty or whitespace")
-        self._update_or_append_tag(key, f"~{regex}")
-        return self
-
-    def with_tag_condition(self, condition: str) -> 'Changeset':
-        if not isinstance(condition, str):
-            raise TypeError("condition must be of type str")
-        self.validate_tag_condition(condition)
-        self.tag_conditions.append(condition)
-        return self
-
-    def from_set(self, set_name: str) -> 'Changeset':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.filter_from_set = set_name
-        return self
-
-    def store_as_set(self, set_name: str) -> 'Changeset':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self._store_as_set_name = set_name
         return self
 
     def __str__(self) -> str:

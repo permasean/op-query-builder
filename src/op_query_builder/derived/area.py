@@ -4,10 +4,6 @@ from op_query_builder.elements.base import Element
 class Area(Element):
     def __init__(self) -> None:
         super().__init__()
-        self.id: Optional[int] = None
-        self.tags: List[TypingTuple[str, str]] = []
-        self._store_as_set_name: Optional[str] = None
-        self.filter_from_set: Optional[str] = None
 
     def with_id(self, id: int) -> 'Area':
         if not isinstance(id, int):
@@ -29,20 +25,6 @@ class Area(Element):
         super().with_pivot(set_name)
         return self
 
-    def with_tags(self, tags: List[TypingTuple[str, str]]) -> 'Area':
-        if not isinstance(tags, list):
-            raise TypeError("tags must be of type list")
-        for tag in tags:
-            if not isinstance(tag, tuple):
-                raise TypeError("Each tag in tags must be of type tuple")
-            if len(tag) != 2:
-                raise ValueError("Each tag in tags must be a tuple of length 2")
-            for el in tag:
-                if not isinstance(el, str):
-                    raise TypeError("Tag key and value must be of type str")
-        self.tags = tags
-        return self
-
     def with_boundary(self, boundary: str) -> 'Area':
         if not isinstance(boundary, str):
             raise TypeError("boundary must be of type str")
@@ -58,77 +40,6 @@ class Area(Element):
             raise ValueError("name cannot be empty or whitespace")
         self._update_or_append_tag("name", name)
         return self
-
-    def from_set(self, set_name: str) -> 'Area':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.filter_from_set = set_name
-        return self
-
-    def with_tag_exists(self, key: str) -> 'Area':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self._update_or_append_tag(key, "")
-        return self
-
-    def with_tag_not_exists(self, key: str) -> 'Area':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self._update_or_append_tag(f"!{key}", "")
-        return self
-
-    def with_tag_not(self, key: str, value: str) -> 'Area':
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise TypeError("key and value must be of type str")
-        if not key.strip() or not value.strip():
-            raise ValueError("key and value cannot be empty or whitespace")
-        self._update_or_append_tag(key, f"!={value}")
-        return self
-
-    def with_tag_regex(self, key: str, regex: str) -> 'Area':
-        if not isinstance(key, str) or not isinstance(regex, str):
-            raise TypeError("key and regex must be of type str")
-        if not key.strip() or not regex.strip():
-            raise ValueError("key and regex cannot be empty or whitespace")
-        self._update_or_append_tag(key, f"~{regex}")
-        return self
-
-    def with_tag_condition(self, condition: str) -> 'Area':
-        if not isinstance(condition, str):
-            raise TypeError("condition must be of type str")
-        self.validate_tag_condition(condition)
-        self.tag_conditions.append(condition)
-        return self
-
-    def store_as_set(self, set_name: str) -> 'Area':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self._store_as_set_name = set_name
-        return self
-
-    def _update_or_append_tag(self, key: str, value: str) -> None:
-        """Helper method to update an existing tag or append a new one, normalizing keys with '!' prefix."""
-        # Normalize the key by stripping the '!' prefix for comparison
-        normalized_key = key.lstrip("!")
-        for i, (existing_key, _) in enumerate(self.tags):
-            # Normalize the existing key as well
-            normalized_existing_key = existing_key.lstrip("!")
-            if normalized_existing_key == normalized_key:
-                self.tags[i] = (key, value)
-                return
-        self.tags.append((key, value))
 
     def __str__(self) -> str:
         query = ""

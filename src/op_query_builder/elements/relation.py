@@ -4,9 +4,6 @@ from .base import Element
 class Relation(Element):
     def __init__(self) -> None:
         super().__init__()
-        self.id: Optional[int] = None
-        self.ids: List[int] = []
-        self.tags: List[Tuple[str, str]] = []
         self.bbox: Optional[Tuple[float, float, float, float]] = None
         self.area_id: Optional[int] = None
         self.area_name: Optional[str] = None
@@ -19,8 +16,6 @@ class Relation(Element):
         self.relation: Optional[int] = None  # relation(r:relation_id)
         self.relation_and_role: Optional[Tuple[int, str]] = None  # relation(r:relation_id,"role")
         self.relation_from_set: Optional[str] = None  # relation(r.set_name)
-        self._store_as_set_name: Optional[str] = None
-        self.filter_from_set: Optional[str] = None
         self.min_members: Optional[int] = None  # Filter by minimum member count
         self.min_role_count: Optional[Tuple[str, int]] = None  # (role, min_count)
         self.include_members: bool = False  # Downward recursion
@@ -38,45 +33,6 @@ class Relation(Element):
 
     def _has_relation_filter(self) -> bool:
         return any([self.relation, self.relation_and_role, self.relation_from_set])
-
-    def with_id(self, id: int) -> 'Relation':
-        if not isinstance(id, int):
-            raise TypeError("id must be of type int")
-        if id < 0:
-            raise ValueError("id must be a non-negative integer")
-        if self.ids:
-            raise ValueError("Cannot set id, field ids is already set. Choose one or the other")
-        self.id = id
-        return self
-
-    def with_ids(self, ids: List[int]) -> 'Relation':
-        if not isinstance(ids, list):
-            raise TypeError("ids must be of type list")
-        if not ids:
-            raise ValueError("ids list cannot be empty")
-        for id in ids:
-            if not isinstance(id, int):
-                raise TypeError("All values in ids must be of type int")
-            if id < 0:
-                raise ValueError("All values in ids must be non-negative integers")
-        if self.id is not None:
-            raise ValueError("Cannot set ids, field id is already set. Choose one or the other")
-        self.ids = ids
-        return self
-
-    def with_tags(self, tags: List[Tuple[str, str]]) -> 'Relation':
-        if not isinstance(tags, list):
-            raise TypeError("tags must be of type list")
-        for tag in tags:
-            if not isinstance(tag, tuple):
-                raise TypeError("Each tag in tags must be of type tuple")
-            if len(tag) != 2:
-                raise ValueError("Each tag in tags must be a tuple of length 2")
-            for el in tag:
-                if not isinstance(el, str):
-                    raise TypeError("Tag key and value must be of type str")
-        self.tags = tags
-        return self
 
     def with_type(self, relation_type: str) -> 'Relation':
         """Filter by relation type (e.g., 'relation[type=multipolygon]')."""
@@ -254,55 +210,6 @@ class Relation(Element):
         self.include_parents = True
         return self
 
-    def from_set(self, set_name: str) -> 'Relation':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self.filter_from_set = set_name
-        return self
-
-    def with_tag_exists(self, key: str) -> 'Relation':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self.tags.append((key, ""))
-        return self
-
-    def with_tag_not_exists(self, key: str) -> 'Relation':
-        if not isinstance(key, str):
-            raise TypeError("key must be of type str")
-        if not key.strip():
-            raise ValueError("key cannot be empty or whitespace")
-        self.tags.append((f"!{key}", ""))
-        return self
-
-    def with_tag_not(self, key: str, value: str) -> 'Relation':
-        if not isinstance(key, str) or not isinstance(value, str):
-            raise TypeError("key and value must be of type str")
-        if not key.strip() or not value.strip():
-            raise ValueError("key and value cannot be empty or whitespace")
-        self.tags.append((key, f"!={value}"))
-        return self
-
-    def with_tag_regex(self, key: str, regex: str) -> 'Relation':
-        if not isinstance(key, str) or not isinstance(regex, str):
-            raise TypeError("key and regex must be of type str")
-        if not key.strip() or not regex.strip():
-            raise ValueError("key and regex cannot be empty or whitespace")
-        self.tags.append((key, f"~{regex}"))
-        return self
-
-    def with_tag_condition(self, condition: str) -> 'Relation':
-        if not isinstance(condition, str):
-            raise TypeError("condition must be of type str")
-        self.validate_tag_condition(condition)
-        self.tag_conditions.append(condition)
-        return self
-
     def with_user(self, username: str) -> 'Relation':
         if not isinstance(username, str):
             raise TypeError("username must be of type str")
@@ -335,16 +242,6 @@ class Relation(Element):
         if version < 1:
             raise ValueError("version must be a positive integer")
         self.tags.append(("version", str(version)))
-        return self
-
-    def store_as_set(self, set_name: str) -> 'Relation':
-        if not isinstance(set_name, str):
-            raise TypeError("set_name must be of type str")
-        if not set_name.strip():
-            raise ValueError("set_name cannot be empty or whitespace")
-        if any(char in set_name for char in '[]{}();'):
-            raise ValueError("set_name contains invalid characters for Overpass QL")
-        self._store_as_set_name = set_name
         return self
 
     def __str__(self) -> str:
@@ -406,7 +303,7 @@ class Relation(Element):
             if self.include_members:
                 query += ">"
                 if self.include_parents:
-                    query += ";"  # Add semicolon between > and <
+                    query += ";"
             if self.include_parents:
                 query += "<"
             query += ")"
@@ -415,5 +312,5 @@ class Relation(Element):
         if self._store_as_set_name:
             query += f"->.{self._store_as_set_name}"
         
-        query += ";"  # Final semicolon for the entire statement
+        query += ";"
         return query
