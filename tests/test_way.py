@@ -124,15 +124,15 @@ class TestWay(unittest.TestCase):
 
     def test_with_nodes(self):
         way = self.tagged_way.with_nodes()
-        self.assertEqual(str(way), "(way[highway=primary];>;);")
+        self.assertEqual(str(way), "(way[highway=primary];>);")
 
     def test_with_parents(self):
         way = self.tagged_way.with_parents()
-        self.assertEqual(str(way), "(way[highway=primary];<;);")
+        self.assertEqual(str(way), "(way[highway=primary];<);")
 
     def test_with_nodes_and_parents(self):
         way = self.tagged_way.with_nodes().with_parents()
-        self.assertEqual(str(way), "(way[highway=primary];>;<;);")
+        self.assertEqual(str(way), "(way[highway=primary];>;<);")
 
     def test_with_area_by_id(self):
         way = self.way.with_area_by_id(3600000000)
@@ -185,6 +185,12 @@ class TestWay(unittest.TestCase):
     def test_with_tag_condition(self):
         way = self.way.with_tag_condition('["highway"~"primary"]')
         self.assertEqual(str(way), 'way["highway"~"primary"];')
+        with self.assertRaises(ValueError):
+            way.with_tag_condition("invalid")  # Missing brackets
+        with self.assertRaises(ValueError):
+            way.with_tag_condition('["key"=value]')  # Unquoted value
+        with self.assertRaises(ValueError):
+            way.with_tag_condition('["key"]')  # Missing operator
 
     def test_with_if_condition(self):
         way = self.way.with_if_condition('length() > 1000')

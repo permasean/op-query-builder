@@ -160,7 +160,11 @@ class TestNode(unittest.TestCase):
         node = Node().with_tag_condition('["highway"~"primary"]')
         self.assertEqual(str(node), 'node["highway"~"primary"];')
         with self.assertRaises(ValueError):
-            Node().with_tag_condition("invalid")
+            Node().with_tag_condition("invalid")  # Missing brackets
+        with self.assertRaises(ValueError):
+            Node().with_tag_condition('["key"=value]')  # Unquoted value
+        with self.assertRaises(ValueError):
+            Node().with_tag_condition('["key"]')  # Missing operator
 
     def test_with_if_condition(self):
         node = Node().with_if_condition('t["population"] > 100000')

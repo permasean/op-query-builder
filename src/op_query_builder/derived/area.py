@@ -104,10 +104,7 @@ class Area(Element):
     def with_tag_condition(self, condition: str) -> 'Area':
         if not isinstance(condition, str):
             raise TypeError("condition must be of type str")
-        if not condition.strip():
-            raise ValueError("condition cannot be empty or whitespace")
-        if not condition.startswith('[') or not condition.endswith(']'):
-            raise ValueError("condition must be formatted as a tag filter, e.g., '[key=value]'")
+        self.validate_tag_condition(condition)
         self.tag_conditions.append(condition)
         return self
 

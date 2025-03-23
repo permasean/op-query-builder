@@ -157,6 +157,12 @@ class TestChangeset(unittest.TestCase):
     def test_with_tag_condition(self):
         changeset = self.changeset.with_tag_condition('["user"~"John.*"]')
         self.assertEqual(str(changeset), 'changeset["user"~"John.*"];')
+        with self.assertRaises(ValueError):
+            changeset.with_tag_condition("invalid")  # Missing brackets
+        with self.assertRaises(ValueError):
+            changeset.with_tag_condition('["key"=value]')  # Unquoted value
+        with self.assertRaises(ValueError):
+            changeset.with_tag_condition('["key"]')  # Missing operator
 
     def test_with_if_condition(self):
         changeset = self.changeset.with_if_condition('count_tags() > 2')

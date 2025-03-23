@@ -299,10 +299,7 @@ class Relation(Element):
     def with_tag_condition(self, condition: str) -> 'Relation':
         if not isinstance(condition, str):
             raise TypeError("condition must be of type str")
-        if not condition.strip():
-            raise ValueError("condition cannot be empty or whitespace")
-        if not condition.startswith('[') or not condition.endswith(']'):
-            raise ValueError("condition must be formatted as a tag filter, e.g., '[key=value]'")
+        self.validate_tag_condition(condition)
         self.tag_conditions.append(condition)
         return self
 
@@ -402,14 +399,21 @@ class Relation(Element):
             query += f'(r:{self.relation_and_role[0]},"{self.relation_and_role[1]}")'
         if self.relation_from_set:
             query += f"(r.{self.relation_from_set})"
+        
+        # Handle recursion (include_members or include_parents)
         if self.include_members or self.include_parents:
             query = f"({query};"
             if self.include_members:
-                query += ">;"
+                query += ">"
+                if self.include_parents:
+                    query += ";"  # Add semicolon between > and <
             if self.include_parents:
-                query += "<;"
+                query += "<"
             query += ")"
+        
+        # Store as set
         if self._store_as_set_name:
             query += f"->.{self._store_as_set_name}"
-        query += ";"
+        
+        query += ";"  # Final semicolon for the entire statement
         return query

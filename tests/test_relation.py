@@ -140,27 +140,27 @@ class TestRelation(unittest.TestCase):
 
     def test_with_members(self):
         relation = self.tagged_relation.with_members()
-        self.assertEqual(str(relation), "(relation[boundary=administrative];>;);")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];>);")
 
     def test_with_parents(self):
         relation = self.tagged_relation.with_parents()
-        self.assertEqual(str(relation), "(relation[boundary=administrative];<;);")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];<);")
 
     def test_with_members_and_parents(self):
         relation = self.tagged_relation.with_members().with_parents()
-        self.assertEqual(str(relation), "(relation[boundary=administrative];>;<;);")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];>;<);")
 
     def test_with_members_and_set(self):
         relation = self.tagged_relation.with_members().store_as_set("areas")
-        self.assertEqual(str(relation), "(relation[boundary=administrative];>;)->.areas;")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];>)->.areas;")
 
     def test_with_parents_and_set(self):
         relation = self.tagged_relation.with_parents().store_as_set("parents")
-        self.assertEqual(str(relation), "(relation[boundary=administrative];<;)->.parents;")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];<)->.parents;")
 
     def test_with_members_parents_and_set(self):
         relation = self.tagged_relation.with_members().with_parents().store_as_set("combined")
-        self.assertEqual(str(relation), "(relation[boundary=administrative];>;<;)->.combined;")
+        self.assertEqual(str(relation), "(relation[boundary=administrative];>;<)->.combined;")
 
     def test_with_area_by_id(self):
         relation = self.relation.with_area_by_id(3600000000)
@@ -201,6 +201,12 @@ class TestRelation(unittest.TestCase):
     def test_with_tag_condition(self):
         relation = self.relation.with_tag_condition('["boundary"~"administrative"]')
         self.assertEqual(str(relation), 'relation["boundary"~"administrative"];')
+        with self.assertRaises(ValueError):
+            relation.with_tag_condition("invalid")  # Missing brackets
+        with self.assertRaises(ValueError):
+            relation.with_tag_condition('["key"=value]')  # Unquoted value
+        with self.assertRaises(ValueError):
+            relation.with_tag_condition('["key"]')  # Missing operator
 
     def test_with_if_condition(self):
         relation = self.relation.with_if_condition('count(members) > 10')

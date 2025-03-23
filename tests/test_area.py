@@ -103,6 +103,12 @@ class TestArea(unittest.TestCase):
     def test_with_tag_condition(self):
         area = self.area.with_tag_condition('["boundary"~"administrative"]')
         self.assertEqual(str(area), 'area["boundary"~"administrative"];')
+        with self.assertRaises(ValueError):
+            area.with_tag_condition("invalid")  # Missing brackets
+        with self.assertRaises(ValueError):
+            area.with_tag_condition('["key"=value]')  # Unquoted value
+        with self.assertRaises(ValueError):
+            area.with_tag_condition('["key"]')  # Missing operator
 
     def test_with_if_condition(self):
         area = self.area.with_if_condition('count_tags() > 2')

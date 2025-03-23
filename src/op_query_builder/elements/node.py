@@ -252,11 +252,7 @@ class Node(Element):
         """Add a custom tag condition (e.g., '["highway"~"^(primary|secondary)$"]')."""
         if not isinstance(condition, str):
             raise TypeError("condition must be of type str")
-        if not condition.strip():
-            raise ValueError("condition cannot be empty or whitespace")
-        # Basic validation: should look like a tag filter
-        if not condition.startswith('[') or not condition.endswith(']'):
-            raise ValueError("condition must be formatted as a tag filter, e.g., '[key=value]'")
+        self.validate_tag_condition(condition)
         self.tag_conditions.append(condition)
         return self
     
