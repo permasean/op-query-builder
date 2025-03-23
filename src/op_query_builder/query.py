@@ -6,6 +6,8 @@ from op_query_builder.elements.changeset import Changeset
 from op_query_builder.derived.area import Area
 from op_query_builder.temporal.adiff import Adiff
 from op_query_builder.temporal.timeline import Timeline
+from op_query_builder.temporal.diff import Diff
+from op_query_builder.temporal.recurse import Recurse
 
 class Query:
     def __init__(self):
@@ -14,7 +16,7 @@ class Query:
         self.timeout: Optional[int] = None  # Timeout in seconds
         self.date: Optional[str] = None  # Date for historical queries (e.g., "2023-01-01T00:00:00Z")
         self.global_bbox: Optional[TypingTuple[float, float, float, float]] = None  # (min_lat, min_lon, max_lat, max_lon)
-        self.elements: List[TypingUnion[Node, Way, Relation, Changeset, Area, 'Union', 'Difference']] = []  # Order matters
+        self.statements: List[TypingUnion[Node, Way, Relation, Changeset, Area, 'Union', 'Difference', Adiff, Timeline, Diff, Recurse]] = []  # Combined list for all statements
         self.is_in_statements: List[TypingTuple[float, float, Optional[str]]] = []  # (lat, lon, set_name)
         self.foreach_statements: List[TypingTuple[str, 'Query']] = []  # (set_name, subquery)
         self.convert_statements: List[TypingTuple[str, str, List[str]]] = []  # (element_type, set_name, tags)
@@ -22,7 +24,6 @@ class Query:
         self.limit: Optional[int] = None  # Limit the number of results
         self.output_mode: Optional[str] = None  # count, ids, or None
         self.settings: dict[str, str] = {}  # For arbitrary settings
-        self.temporal_statements: List[TypingUnion[Adiff, Timeline]] = []  # For adiff and timeline
 
     def with_output(self, output: str) -> 'Query':
         if output not in ['json', 'csv', 'xml']:
@@ -106,45 +107,53 @@ class Query:
         return self
 
     def add_node(self, node: Node) -> 'Query':
-        self.elements.append(node)
+        self.statements.append(node)
         return self
 
     def add_way(self, way: Way) -> 'Query':
-        self.elements.append(way)
+        self.statements.append(way)
         return self
 
     def add_relation(self, relation: Relation) -> 'Query':
-        self.elements.append(relation)
+        self.statements.append(relation)
         return self
 
     def add_changeset(self, changeset: Changeset) -> 'Query':
-        self.elements.append(changeset)
+        self.statements.append(changeset)
         return self
 
     def add_area(self, area: Area) -> 'Query':
-        self.elements.append(area)
+        self.statements.append(area)
         return self
 
     def add_union(self, *elements: TypingUnion[Node, Way, Relation, Changeset, Area]) -> 'Query':
         if not elements:
             raise ValueError("At least one element must be provided for a union")
         union = Union(elements)
-        self.elements.append(union)
+        self.statements.append(union)
         return self
 
     def add_difference(self, base: TypingUnion[Node, Way, Relation, Changeset, Area], *subtract: TypingUnion[Node, Way, Relation, Changeset, Area]) -> 'Query':
         if not subtract:
             raise ValueError("At least one element must be provided to subtract in a difference")
         difference = Difference(base, subtract)
-        self.elements.append(difference)
+        self.statements.append(difference)
         return self
 
     def add_adiff(self, adiff: Adiff) -> 'Query':
-        self.temporal_statements.append(adiff)
+        self.statements.append(adiff)
         return self
 
     def add_timeline(self, timeline: Timeline) -> 'Query':
-        self.temporal_statements.append(timeline)
+        self.statements.append(timeline)
+        return self
+
+    def add_diff(self, diff: Diff) -> 'Query':
+        self.statements.append(diff)
+        return self
+
+    def add_recurse(self, recurse: Recurse) -> 'Query':
+        self.statements.append(recurse)
         return self
 
     def add_is_in(self, lat: float, lon: float, set_name: Optional[str] = None) -> 'Query':
@@ -255,19 +264,12 @@ class Query:
                 line += f"->.{set_name}"
             query_lines.append(f"{line};")
 
-        # Add temporal statements (adiff, timeline) before elements
-        for temporal in self.temporal_statements:
-            temporal_str = str(temporal)
-            if temporal_str.endswith(';'):
-                temporal_str = temporal_str[:-1]
-            query_lines.append(f"{temporal_str};")
-
-        # Add elements
-        for element in self.elements:
-            element_str = str(element)
-            if element_str.endswith(';'):
-                element_str = element_str[:-1]
-            query_lines.append(f"{element_str};")
+        # Add all statements (elements and temporal) in order of addition
+        for statement in self.statements:
+            statement_str = str(statement)
+            if statement_str.endswith(';'):
+                statement_str = statement_str[:-1]
+            query_lines.append(f"{statement_str};")
 
         # Add foreach statements
         for set_name, subquery in self.foreach_statements:

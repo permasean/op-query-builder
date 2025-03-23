@@ -7,6 +7,8 @@ from op_query_builder.elements.changeset import Changeset
 from op_query_builder.derived.area import Area
 from op_query_builder.temporal.adiff import Adiff
 from op_query_builder.temporal.timeline import Timeline
+from op_query_builder.temporal.diff import Diff
+from op_query_builder.temporal.recurse import Recurse
 
 class TestQuery(unittest.TestCase):
     def setUp(self):
@@ -120,12 +122,38 @@ class TestQuery(unittest.TestCase):
         expected = "[out:json];\ntimeline(node(123));\nout body;"
         self.assertEqual(str(self.query), expected)
 
+    def test_add_diff(self):
+        diff = Diff("2023-01-01T00:00:00Z", "2023-12-31T23:59:59Z")
+        self.query.add_diff(diff)
+        expected = '[out:json];\ndiff("2023-01-01T00:00:00Z","2023-12-31T23:59:59Z");\nout body;'
+        self.assertEqual(str(self.query), expected)
+
+    def test_add_recurse(self):
+        recurse = Recurse(">>", "boundary_set")
+        self.query.add_recurse(recurse)
+        expected = "[out:json];\n.boundary_set >>;\nout body;"
+        self.assertEqual(str(self.query), expected)
+
     def test_combined_elements_with_temporal(self):
         node = Node().with_id(123)
         timeline = Timeline(node)
         way = Way().with_tags([("highway", "primary")])
         self.query.add_timeline(timeline).add_way(way)
         expected = "[out:json];\ntimeline(node(123));\nway[highway=primary];\nout body;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_combined_elements_with_diff(self):
+        node = Node().with_id(123)
+        diff = Diff("2023-01-01T00:00:00Z", "2023-12-31T23:59:59Z")
+        self.query.add_diff(diff).add_node(node)
+        expected = '[out:json];\ndiff("2023-01-01T00:00:00Z","2023-12-31T23:59:59Z");\nnode(123);\nout body;'
+        self.assertEqual(str(self.query), expected)
+
+    def test_combined_elements_with_recurse(self):
+        relation = Relation().with_tags([("type", "boundary")])
+        recurse = Recurse(">>")
+        self.query.add_relation(relation).add_recurse(recurse)
+        expected = '[out:json];\nrelation[type=boundary];\n>>;\nout body;'
         self.assertEqual(str(self.query), expected)
 
     def test_add_changeset(self):
