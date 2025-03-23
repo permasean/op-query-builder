@@ -1,7 +1,6 @@
 from typing import Optional, Dict, Any
 import overpy
 import time
-from functools import lru_cache
 from op_query_builder.query import Query
 from op_query_builder.elements.relation import Relation
 from op_query_builder.derived.area import Area

@@ -1,4 +1,4 @@
-from typing import Tuple, Union as TypingUnion, Optional, List, Tuple as TypingTuple
+from typing import Tuple as TypingTuple, Union as TypingUnion, Optional, List
 from op_query_builder.elements.node import Node
 from op_query_builder.elements.way import Way
 from op_query_builder.elements.relation import Relation
@@ -8,11 +8,14 @@ from op_query_builder.derived.area import Area
 class Query:
     def __init__(self):
         self.output: str = 'json'  # json, csv, or xml
-        self.output_detail: str = 'body'  # body, skel, geom, tags, meta, center
+        self.output_detail: Optional[str] = 'body'  # body, skel, geom, tags, meta, center, or None
         self.timeout: Optional[int] = None  # Timeout in seconds
         self.date: Optional[str] = None  # Date for historical queries (e.g., "2023-01-01T00:00:00Z")
-        self.global_bbox: Optional[Tuple[float, float, float, float]] = None  # (min_lat, min_lon, max_lat, max_lon)
+        self.global_bbox: Optional[TypingTuple[float, float, float, float]] = None  # (min_lat, min_lon, max_lat, max_lon)
         self.elements: List[TypingUnion[Node, Way, Relation, Changeset, Area, 'Union', 'Difference']] = []  # Order matters
+        self.is_in_statements: List[TypingTuple[float, float, Optional[str]]] = []  # (lat, lon, set_name)
+        self.foreach_statements: List[TypingTuple[str, 'Query']] = []  # (set_name, subquery)
+        self.convert_statements: List[TypingTuple[str, str, List[str]]] = []  # (element_type, set_name, tags)
 
     def with_output(self, output: str) -> 'Query':
         if output not in ['json', 'csv', 'xml']:
@@ -20,10 +23,11 @@ class Query:
         self.output = output
         return self
 
-    def with_output_detail(self, detail: str) -> 'Query':
-        valid_details = ['body', 'skel', 'geom', 'tags', 'meta', 'center']
-        if detail not in valid_details:
-            raise ValueError(f"Invalid output_detail, must be one of {valid_details}")
+    def with_output_detail(self, detail: Optional[str]) -> 'Query':
+        if detail is not None:
+            valid_details = ['body', 'skel', 'geom', 'tags', 'meta', 'center']
+            if detail not in valid_details:
+                raise ValueError(f"Invalid output_detail, must be one of {valid_details}")
         self.output_detail = detail
         return self
 
@@ -36,7 +40,6 @@ class Query:
         return self
 
     def with_date(self, date: str) -> 'Query':
-        """Set a date for historical queries (e.g., '[date:\"2023-01-01T00:00:00Z\"]')."""
         if not isinstance(date, str):
             raise TypeError(f"Date must be a string, got {type(date).__name__}")
         if not date.strip():
@@ -46,7 +49,7 @@ class Query:
         self.date = date
         return self
 
-    def with_global_bbox(self, bbox: Tuple[float, float, float, float]) -> 'Query':
+    def with_global_bbox(self, bbox: TypingTuple[float, float, float, float]) -> 'Query':
         self._validate_bbox(bbox)
         self.global_bbox = bbox
         return self
@@ -72,7 +75,6 @@ class Query:
         return self
 
     def add_union(self, *elements: TypingUnion[Node, Way, Relation, Changeset, Area]) -> 'Query':
-        """Add a union of elements (e.g., '(way[highway=primary]; way[highway=secondary];);')."""
         if not elements:
             raise ValueError("At least one element must be provided for a union")
         union = Union(elements)
@@ -80,17 +82,63 @@ class Query:
         return self
 
     def add_difference(self, base: TypingUnion[Node, Way, Relation, Changeset, Area], *subtract: TypingUnion[Node, Way, Relation, Changeset, Area]) -> 'Query':
-        """Add a difference of elements (e.g., '(way[highway=primary]; - way[highway=secondary];);')."""
         if not subtract:
             raise ValueError("At least one element must be provided to subtract in a difference")
         difference = Difference(base, subtract)
         self.elements.append(difference)
         return self
 
+    def add_is_in(self, lat: float, lon: float, set_name: Optional[str] = None) -> 'Query':
+        """Add an 'is_in' statement to find areas containing the given point (e.g., 'is_in(51.5,-0.1)->.areas;')."""
+        if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+            raise TypeError("lat and lon must be int or float")
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+            raise ValueError("lat must be -90 to 90, lon must be -180 to 180")
+        if set_name is not None:
+            if not isinstance(set_name, str):
+                raise TypeError("set_name must be of type str")
+            if not set_name.strip():
+                raise ValueError("set_name cannot be empty or whitespace")
+            if any(char in set_name for char in '[]{}();'):
+                raise ValueError("set_name contains invalid characters for Overpass QL")
+        self.is_in_statements.append((lat, lon, set_name))
+        return self
+
+    def add_foreach(self, set_name: str, subquery: 'Query') -> 'Query':
+        """Add a 'foreach' statement to iterate over elements in a set (e.g., '.set_name foreach { ... };')."""
+        if not isinstance(set_name, str):
+            raise TypeError("set_name must be of type str")
+        if not set_name.strip():
+            raise ValueError("set_name cannot be empty or whitespace")
+        if any(char in set_name for char in '[]{}();'):
+            raise ValueError("set_name contains invalid characters for Overpass QL")
+        if not isinstance(subquery, Query):
+            raise TypeError("subquery must be of type Query")
+        # Ensure the subquery doesn't include its own output statement
+        subquery.with_output_detail(None)
+        self.foreach_statements.append((set_name, subquery))
+        return self
+
+    def add_convert(self, element_type: str, set_name: str, tags: List[str]) -> 'Query':
+        """Add a 'convert' statement to transform elements (e.g., 'convert node ::id=way.id;')."""
+        valid_types = ['node', 'way', 'relation']
+        if element_type not in valid_types:
+            raise ValueError(f"element_type must be one of {valid_types}")
+        if not isinstance(set_name, str):
+            raise TypeError("set_name must be of type str")
+        if not set_name.strip():
+            raise ValueError("set_name cannot be empty or whitespace")
+        if any(char in set_name for char in '[]{}();'):
+            raise ValueError("set_name contains invalid characters for Overpass QL")
+        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+            raise TypeError("tags must be a list of strings")
+        self.convert_statements.append((element_type, set_name, tags))
+        return self
+
     def print(self) -> None:
         print(self.__str__())
 
-    def _validate_bbox(self, bbox: Tuple[float, float, float, float]) -> None:
+    def _validate_bbox(self, bbox: TypingTuple[float, float, float, float]) -> None:
         if not isinstance(bbox, tuple):
             raise TypeError(f"Expected a tuple, got {type(bbox).__name__}")
         if len(bbox) != 4:
@@ -103,6 +151,18 @@ class Query:
             raise ValueError("Latitude must be between -90 and 90, with min <= max")
         if not (-180 <= min_lon <= max_lon <= 180):
             raise ValueError("Longitude must be between -180 and 180, with min <= max")
+
+    def _get_subquery_elements(self, subquery: 'Query') -> List[str]:
+        """Extract only the element statements from a subquery, excluding global settings and output."""
+        subquery_lines = str(subquery).split('\n')
+        element_lines = []
+        for line in subquery_lines:
+            # Skip global settings (e.g., "[out:json];") and output (e.g., "out body;")
+            if line.startswith('[') or line.startswith('out '):
+                continue
+            if line.strip():  # Skip empty lines
+                element_lines.append(line.rstrip(';'))
+        return element_lines
 
     def __str__(self) -> str:
         # Build the Overpass QL query string
@@ -122,16 +182,40 @@ class Query:
         if settings:
             query_lines.append(f"[{' '.join(settings)}];")
 
+        # Add is_in statements
+        for lat, lon, set_name in self.is_in_statements:
+            line = f"is_in({lat},{lon})"
+            if set_name:
+                line += f"->.{set_name}"
+            query_lines.append(f"{line};")
+
         # Add elements
         for element in self.elements:
             element_str = str(element)
-            # Remove trailing semicolon from element if present, as we'll add it consistently
             if element_str.endswith(';'):
                 element_str = element_str[:-1]
             query_lines.append(f"{element_str};")
 
-        # Add output detail
-        if self.output_detail:
+        # Add foreach statements
+        for set_name, subquery in self.foreach_statements:
+            subquery_elements = self._get_subquery_elements(subquery)
+            if not subquery_elements:
+                continue  # Skip empty subqueries
+            query_lines.append(f".{set_name} foreach {{")
+            for line in subquery_elements:
+                query_lines.append(f"  {line};")
+            query_lines.append("};")
+
+        # Add convert statements
+        for element_type, set_name, tags in self.convert_statements:
+            tags_str = ", ".join(tags)
+            line = f"convert {element_type} {tags_str}"
+            if set_name:
+                line += f"->.{set_name}"
+            query_lines.append(f"{line};")
+
+        # Add output detail only if explicitly set
+        if self.output_detail is not None:
             query_lines.append(f"out {self.output_detail};")
 
         return "\n".join(query_lines)

@@ -1,9 +1,9 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple as TypingTuple, Union as TypingUnion
 
 class Area:
     def __init__(self) -> None:
         self.id: Optional[int] = None
-        self.tags: List[Tuple[str, str]] = []
+        self.tags: List[TypingTuple[str, str]] = []
         self.pivot_set: Optional[str] = None  # For area(pivot.set_name)
         self._store_as_set_name: Optional[str] = None
         self.filter_from_set: Optional[str] = None
@@ -21,7 +21,7 @@ class Area:
         self.id = id
         return self
 
-    def with_tags(self, tags: List[Tuple[str, str]]) -> 'Area':
+    def with_tags(self, tags: List[TypingTuple[str, str]]) -> 'Area':
         if not isinstance(tags, list):
             raise TypeError("tags must be of type list")
         for tag in tags:

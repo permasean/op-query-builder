@@ -93,5 +93,24 @@ class TestQuery(unittest.TestCase):
         expected = "[out:json];\narea(3600000000)->.berlin_area;\n(way[highway=primary](area.berlin_area); way[highway=secondary](area.berlin_area););\nout body;"
         self.assertEqual(str(self.query), expected)
 
+    def test_add_is_in(self):
+        self.query.add_is_in(51.5, -0.1, "areas")
+        expected = "[out:json];\nis_in(51.5,-0.1)->.areas;\nout body;"
+        self.assertEqual(str(self.query), expected)
+
+    def test_add_foreach(self):
+        self.query.with_output_detail(None)  # Disable the top-level out statement
+        subquery = Query()
+        node = Node().with_tags([("amenity", "restaurant")])
+        subquery.add_node(node)
+        self.query.add_foreach("ways", subquery)
+        expected = "[out:json];\n.ways foreach {\n  node[amenity=restaurant];\n};"
+        self.assertEqual(str(self.query), expected)
+
+    def test_add_convert(self):
+        self.query.add_convert("node", "converted_nodes", ["::id=way.id", "highway=way.highway"])
+        expected = "[out:json];\nconvert node ::id=way.id, highway=way.highway->.converted_nodes;\nout body;"
+        self.assertEqual(str(self.query), expected)
+
 if __name__ == "__main__":
     unittest.main()
